@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Plugin.Permissions;
+using Plugin.Permissions.Abstractions;
+using System;
+using System.Threading.Tasks;
 using Xamarin.Forms;
 
 namespace XFSpeechDemo
@@ -40,11 +43,25 @@ namespace XFSpeechDemo
             recon.Text = args;
         }
 
-        private void Start_Clicked(object sender, EventArgs e)
+        private async void Start_Clicked(object sender, EventArgs e)
         {
             try
             {
-                _speechRecongnitionInstance.StartSpeechToText();
+                var canProceed =await CheckPermissionAsync();
+                
+                if(canProceed)
+                    _speechRecongnitionInstance.StartSpeechToText();
+                else
+                {
+                    if (await CrossPermissions.Current.ShouldShowRequestPermissionRationaleAsync(Permission.Microphone))
+                    {
+                        await DisplayAlert("Need Mic", "Need MicrophoneAccess", "OK");
+                    }
+
+                    var status = await CrossPermissions.Current.RequestPermissionAsync<MicrophonePermission>();
+                    if (status == PermissionStatus.Granted)
+                        Start_Clicked(sender,e);
+                }
             }
             catch(Exception ex)
             {
@@ -60,6 +77,15 @@ namespace XFSpeechDemo
 
         }
 
-        
+        private async Task<bool> CheckPermissionAsync()
+        {
+            System.Diagnostics.Debug.WriteLine("here");
+            var permissionStatus = await CrossPermissions.Current.CheckPermissionStatusAsync(Permission.Microphone);
+            if(PermissionStatus.Granted==permissionStatus)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }
